@@ -1,12 +1,13 @@
-// Takım arama bileşeni: kullanıcı yazar, dropdown listesi açılır.
-// Seçim sonrası onSelect callback'i tetiklenir. Debounce ile API yükü azaltılır.
+// Takım arama bileşeni.
+// Dropdown absolute pozisyonlanmış + elevation — parent container kırpması yok.
+// Seçim sonrası onSelect callback'i (name, id) ile tetiklenir.
 
 import React, { useState, useRef, useCallback } from 'react';
 import {
   View,
   Text,
   TextInput,
-  FlatList,
+  ScrollView,
   TouchableOpacity,
   ActivityIndicator,
   StyleSheet,
@@ -21,7 +22,11 @@ interface Props {
   initialValue?: string;
 }
 
-export default function TeamSearch({ placeholder = 'TAKIM ARA...', onSelect, initialValue = '' }: Props) {
+export default function TeamSearch({
+  placeholder = 'TAKIM ARA...',
+  onSelect,
+  initialValue = '',
+}: Props) {
   const [query, setQuery] = useState(initialValue);
   const [results, setResults] = useState<TeamResult[]>([]);
   const [loading, setLoading] = useState(false);
@@ -32,7 +37,10 @@ export default function TeamSearch({ placeholder = 'TAKIM ARA...', onSelect, ini
     setQuery(text);
     setConfirmed(false);
     if (timer.current) clearTimeout(timer.current);
-    if (text.length < 2) { setResults([]); return; }
+    if (text.length < 2) {
+      setResults([]);
+      return;
+    }
     timer.current = setTimeout(async () => {
       setLoading(true);
       const data = await searchTeams(text);
@@ -42,14 +50,14 @@ export default function TeamSearch({ placeholder = 'TAKIM ARA...', onSelect, ini
   }, []);
 
   function handleSelect(item: TeamResult) {
-    setQuery(item.team.name.toUpperCase());
+    setQuery(item.team.name);
     setResults([]);
     setConfirmed(true);
     onSelect(item.team.name, item.team.id);
   }
 
   return (
-    <View>
+    <View style={s.wrapper}>
       {/* Input satırı */}
       <View style={s.inputRow}>
         <TextInput
@@ -59,7 +67,7 @@ export default function TeamSearch({ placeholder = 'TAKIM ARA...', onSelect, ini
           value={query}
           onChangeText={handleChange}
           autoCorrect={false}
-          autoCapitalize="characters"
+          autoCapitalize="words"
         />
         {loading
           ? <ActivityIndicator size="small" color={C.green} style={{ marginRight: 12 }} />
@@ -69,31 +77,50 @@ export default function TeamSearch({ placeholder = 'TAKIM ARA...', onSelect, ini
         }
       </View>
 
-      {/* Dropdown sonuçları */}
+      {/* Absolute dropdown */}
       {results.length > 0 && (
-        <FlatList
-          data={results}
-          keyExtractor={(item) => String(item.team.id)}
-          style={s.dropdown}
-          keyboardShouldPersistTaps="handled"
-          renderItem={({ item }) => (
-            <TouchableOpacity style={s.dropItem} onPress={() => handleSelect(item)}>
-              {item.team.logo ? (
-                <Image source={{ uri: item.team.logo }} style={s.logo} resizeMode="contain" />
-              ) : null}
-              <View>
-                <Text style={s.dropName}>{item.team.name.toUpperCase()}</Text>
-                <Text style={s.dropSub}>{item.team.country}</Text>
-              </View>
-            </TouchableOpacity>
-          )}
-        />
+        <View style={s.dropdownContainer}>
+          <ScrollView
+            style={{ maxHeight: 240 }}
+            keyboardShouldPersistTaps="handled"
+            nestedScrollEnabled
+          >
+            {results.map((item) => (
+              <TouchableOpacity
+                key={String(item.team.id)}
+                style={s.dropItem}
+                onPress={() => handleSelect(item)}
+                activeOpacity={0.7}
+              >
+                {item.team.logo ? (
+                  <Image
+                    source={{ uri: item.team.logo }}
+                    style={s.logo}
+                    resizeMode="contain"
+                  />
+                ) : (
+                  <View style={s.logoPlaceholder} />
+                )}
+                <View>
+                  <Text style={s.dropName}>{item.team.name}</Text>
+                  <Text style={s.dropSub}>{item.team.country}</Text>
+                </View>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
       )}
     </View>
   );
 }
 
+const INPUT_HEIGHT = 52;
+
 const s = StyleSheet.create({
+  wrapper: {
+    zIndex: 999,
+    elevation: 999,
+  },
   inputRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -101,25 +128,29 @@ const s = StyleSheet.create({
     borderWidth: 1,
     borderColor: C.greenBorder,
     borderRadius: 6,
+    height: INPUT_HEIGHT,
   },
   input: {
     flex: 1,
     color: C.green,
     fontSize: 15,
     fontWeight: '700',
-    letterSpacing: 2,
+    letterSpacing: 1,
     paddingHorizontal: 16,
-    paddingVertical: 14,
   },
   tick: { color: C.green, fontSize: 18, marginRight: 14, fontWeight: '700' },
   chevron: { color: C.textMuted, fontSize: 18, marginRight: 14 },
-  dropdown: {
+  dropdownContainer: {
+    position: 'absolute',
+    top: INPUT_HEIGHT + 2,
+    left: 0,
+    right: 0,
+    zIndex: 9999,
+    elevation: 9999,
     backgroundColor: C.bgCard,
     borderWidth: 1,
     borderColor: C.greenBorder,
     borderRadius: 6,
-    marginTop: 4,
-    maxHeight: 230,
   },
   dropItem: {
     flexDirection: 'row',
@@ -130,6 +161,13 @@ const s = StyleSheet.create({
     borderBottomColor: C.greenDim,
   },
   logo: { width: 26, height: 26, marginRight: 12 },
-  dropName: { color: C.green, fontWeight: '700', fontSize: 13, letterSpacing: 1 },
-  dropSub: { color: C.textMuted, fontSize: 10, marginTop: 1, letterSpacing: 1 },
+  logoPlaceholder: {
+    width: 26,
+    height: 26,
+    marginRight: 12,
+    backgroundColor: C.bgActive,
+    borderRadius: 4,
+  },
+  dropName: { color: C.green, fontWeight: '700', fontSize: 13, letterSpacing: 0.5 },
+  dropSub: { color: C.textMuted, fontSize: 10, marginTop: 2 },
 });

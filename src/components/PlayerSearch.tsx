@@ -1,152 +1,278 @@
-// Oyuncu arama ve tahmin bileşeni.
-// Kullanıcı yazarken API'dan öneriler gelir. İki takım ID'si varsa filtreler.
-// onCorrect / onWrong ile sonucu üst bileşene bildirir.
+// Oyuncu arama bileşeni — Modal tabanlı.
+// Seçim yapıldıktan SONRA API ile kariyer doğrulama yapılır.
+// Doğruysa onCorrect(detail), yanlışsa onWrong(name) callback'i tetiklenir.
 
 import React, { useState, useRef, useCallback } from 'react';
 import {
   View,
   Text,
   TextInput,
+  Modal,
   FlatList,
   TouchableOpacity,
   ActivityIndicator,
   StyleSheet,
   Image,
+  Platform,
+  KeyboardAvoidingView,
 } from 'react-native';
-import { searchPlayers, PlayerResult } from '../services/footballApi';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import {
+  searchPlayers,
+  verifyAndGetCareer,
+  PlayerResult,
+  PlayerCareerDetail,
+} from '../services/footballApi';
 import { C } from '../theme';
 
 interface Props {
   team1Id: number | null;
   team2Id: number | null;
   placeholder?: string;
-  onCorrect: (name: string) => void;
+  onCorrect: (detail: PlayerCareerDetail) => void;
   onWrong: (name: string) => void;
   disabled?: boolean;
 }
 
 export default function PlayerSearch({
-  team1Id, team2Id,
-  placeholder = 'TAHMİN',
-  onCorrect, onWrong,
+  team1Id,
+  team2Id,
+  placeholder = 'Oyuncu ara...',
+  onCorrect,
+  onWrong,
   disabled = false,
 }: Props) {
+  const [modalOpen, setModalOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<PlayerResult[]>([]);
   const [loading, setLoading] = useState(false);
+  const [verifying, setVerifying] = useState(false);
+  const [selectedName, setSelectedName] = useState('');
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const handleChange = useCallback((text: string) => {
-    if (disabled) return;
-    setQuery(text);
-    if (timer.current) clearTimeout(timer.current);
-    if (text.length < 2) { setResults([]); return; }
-    timer.current = setTimeout(async () => {
-      setLoading(true);
-      const data = await searchPlayers(text);
-      // Her iki takımda oynamış oyuncuları filtrele
-      const filtered = (team1Id && team2Id)
-        ? data.filter(p => {
-            const ids = p.statistics.map(s => s.team.id);
-            return ids.includes(team1Id) && ids.includes(team2Id);
-          })
-        : data;
-      setResults(filtered.slice(0, 7));
-      setLoading(false);
-    }, 400);
-  }, [disabled, team1Id, team2Id]);
+  const handleChange = useCallback(
+    (text: string) => {
+      setQuery(text);
+      if (timer.current) clearTimeout(timer.current);
+      if (text.length < 3) { setResults([]); return; }
 
-  function handleSelect(item: PlayerResult) {
+      timer.current = setTimeout(async () => {
+        if (!team1Id || !team2Id) return;
+        setLoading(true);
+        const data = await searchPlayers(text, team1Id, team2Id);
+        setResults(data);
+        setLoading(false);
+      }, 800);
+    },
+    [team1Id, team2Id]
+  );
+
+  async function handleSelect(item: PlayerResult) {
+    setModalOpen(false);
+    setQuery('');
     setResults([]);
-    setQuery(item.player.name.toUpperCase());
-    if (team1Id && team2Id) {
-      const ids = item.statistics.map(s => s.team.id);
-      if (ids.includes(team1Id) && ids.includes(team2Id)) {
-        onCorrect(item.player.name);
-      } else {
-        onWrong(item.player.name);
-        setQuery('');
-      }
+    setSelectedName(item.player.name);
+    setVerifying(true);
+
+    if (!team1Id || !team2Id) {
+      setVerifying(false);
+      onCorrect({
+        playerName: item.player.name,
+        playerPhoto: item.player.photo,
+        team1Period: '—',
+        team2Period: '—',
+        isCorrect: true,
+      });
+      return;
+    }
+
+    const detail = await verifyAndGetCareer(
+      item.player.id,
+      item.player.name,
+      item.player.photo,
+      team1Id,
+      team2Id
+    );
+    setVerifying(false);
+
+    if (detail.isCorrect) {
+      onCorrect(detail);
     } else {
-      onCorrect(item.player.name);
+      setSelectedName('');
+      onWrong(item.player.name);
     }
   }
 
-  return (
-    <View>
-      <View style={s.inputRow}>
-        <TextInput
-          style={s.input}
-          placeholder={placeholder}
-          placeholderTextColor={C.textMuted}
-          value={query}
-          onChangeText={handleChange}
-          autoCorrect={false}
-          autoCapitalize="characters"
-          editable={!disabled}
-        />
-        {loading && <ActivityIndicator size="small" color={C.green} style={{ marginRight: 12 }} />}
-      </View>
+  function openModal() {
+    if (disabled || verifying) return;
+    setQuery('');
+    setResults([]);
+    setModalOpen(true);
+  }
 
-      {results.length > 0 && (
-        <FlatList
-          data={results}
-          keyExtractor={item => String(item.player.id)}
-          style={s.dropdown}
-          keyboardShouldPersistTaps="handled"
-          renderItem={({ item }) => (
-            <TouchableOpacity style={s.dropItem} onPress={() => handleSelect(item)}>
-              {item.player.photo
-                ? <Image source={{ uri: item.player.photo }} style={s.photo} />
-                : null
-              }
-              <View>
-                <Text style={s.dropName}>{item.player.name.toUpperCase()}</Text>
-                <Text style={s.dropSub}>{item.statistics[0]?.team?.name ?? ''}</Text>
+  return (
+    <>
+      {/* Tetikleyici — Modal'ı açar */}
+      <TouchableOpacity
+        style={[s.trigger, disabled && { opacity: 0.4 }]}
+        onPress={openModal}
+        activeOpacity={0.8}
+      >
+        {verifying ? (
+          <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+            <ActivityIndicator size="small" color={C.green} />
+            <Text style={[s.triggerMuted, { marginLeft: 10 }]}>
+              Kariyer kontrol ediliyor...
+            </Text>
+          </View>
+        ) : (
+          <Text style={selectedName ? s.triggerFilled : s.triggerMuted}>
+            {selectedName || placeholder}
+          </Text>
+        )}
+        <Text style={{ fontSize: 16 }}>🔍</Text>
+      </TouchableOpacity>
+
+      {/* Tam ekran arama Modal'ı */}
+      <Modal visible={modalOpen} animationType="slide" onRequestClose={() => setModalOpen(false)}>
+        <SafeAreaView style={s.modalSafe}>
+          <KeyboardAvoidingView
+            style={{ flex: 1 }}
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          >
+            {/* Başlık */}
+            <View style={s.header}>
+              <Text style={s.headerTitle}>OYUNCU ARA</Text>
+              <TouchableOpacity onPress={() => setModalOpen(false)} style={s.closeBtn}>
+                <Text style={s.closeBtnText}>✕</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Input */}
+            <View style={s.inputRow}>
+              <TextInput
+                style={s.input}
+                placeholder="Oyuncu adı yaz..."
+                placeholderTextColor={C.textMuted}
+                value={query}
+                onChangeText={handleChange}
+                autoFocus
+                autoCorrect={false}
+                autoCapitalize="words"
+                clearButtonMode="while-editing"
+              />
+              {loading && (
+                <ActivityIndicator size="small" color={C.green} style={{ marginRight: 14 }} />
+              )}
+            </View>
+
+            {/* Sonuçlar */}
+            {results.length > 0 ? (
+              <FlatList
+                data={results}
+                keyExtractor={item => String(item.player.id)}
+                keyboardShouldPersistTaps="handled"
+                style={s.list}
+                renderItem={({ item }) => (
+                  <TouchableOpacity
+                    style={s.listItem}
+                    onPress={() => handleSelect(item)}
+                    activeOpacity={0.7}
+                  >
+                    {item.player.photo ? (
+                      <Image source={{ uri: item.player.photo }} style={s.photo} />
+                    ) : (
+                      <View style={s.photoPlaceholder} />
+                    )}
+                    <View style={{ flex: 1 }}>
+                      <Text style={s.playerName}>{item.player.name}</Text>
+                      <Text style={s.playerTeam}>
+                        {item.statistics[0]?.team?.name ?? '—'}
+                      </Text>
+                    </View>
+                    <Text style={s.arrow}>›</Text>
+                  </TouchableOpacity>
+                )}
+                ItemSeparatorComponent={() => <View style={s.sep} />}
+              />
+            ) : (
+              <View style={s.emptyBox}>
+                <Text style={s.emptyText}>
+                  {query.length < 3 ? 'En az 3 harf yaz...' : loading ? '' : 'Sonuç bulunamadı'}
+                </Text>
               </View>
-            </TouchableOpacity>
-          )}
-        />
-      )}
-    </View>
+            )}
+          </KeyboardAvoidingView>
+        </SafeAreaView>
+      </Modal>
+    </>
   );
 }
 
 const s = StyleSheet.create({
-  inputRow: {
+  trigger: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#0a0a0a',
     borderWidth: 1,
     borderColor: C.greenBorder,
     borderRadius: 6,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    minHeight: 52,
+  },
+  triggerMuted: { flex: 1, color: C.textMuted, fontSize: 14, letterSpacing: 1 },
+  triggerFilled: { flex: 1, color: C.green, fontSize: 14, fontWeight: '700', letterSpacing: 1 },
+
+  modalSafe: { flex: 1, backgroundColor: C.bg },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: C.greenBorder,
+  },
+  headerTitle: { fontSize: 14, fontWeight: '900', color: C.green, letterSpacing: 4 },
+  closeBtn: { padding: 8 },
+  closeBtnText: { color: C.textMuted, fontSize: 18, fontWeight: '700' },
+
+  inputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: C.bgCard,
+    borderBottomWidth: 1,
+    borderBottomColor: C.greenBorder,
   },
   input: {
     flex: 1,
     color: C.textWhite,
-    fontSize: 15,
-    fontWeight: '700',
-    letterSpacing: 2,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
+    fontSize: 16,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
   },
-  dropdown: {
-    backgroundColor: C.bgCard,
-    borderWidth: 1,
-    borderColor: C.greenBorder,
-    borderRadius: 6,
-    marginTop: 4,
-    maxHeight: 200,
-  },
-  dropItem: {
+
+  list: { flex: 1 },
+  listItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: C.greenDim,
+    paddingHorizontal: 20,
+    paddingVertical: 14,
   },
-  photo: { width: 28, height: 28, borderRadius: 14, marginRight: 12 },
-  dropName: { color: C.green, fontWeight: '700', fontSize: 13, letterSpacing: 1 },
-  dropSub: { color: C.textMuted, fontSize: 10, marginTop: 1 },
+  sep: { height: 1, backgroundColor: C.greenBorder, marginLeft: 74 },
+  photo: { width: 46, height: 46, borderRadius: 23, marginRight: 14 },
+  photoPlaceholder: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    backgroundColor: C.bgActive,
+    marginRight: 14,
+  },
+  playerName: { color: C.textWhite, fontSize: 15, fontWeight: '700' },
+  playerTeam: { color: C.textMuted, fontSize: 11, marginTop: 2, letterSpacing: 1 },
+  arrow: { color: C.greenBorder, fontSize: 24 },
+
+  emptyBox: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  emptyText: { color: C.textMuted, fontSize: 13, letterSpacing: 2 },
 });

@@ -10,6 +10,8 @@ import {
   Platform,
   Alert,
   StyleSheet,
+  Image,
+  Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -21,12 +23,15 @@ import PlayerSearch from '../../src/components/PlayerSearch';
 import Countdown from '../../src/components/Countdown';
 import HazirButton from '../../src/components/HazirButton';
 import SplitScreen from '../../src/components/SplitScreen';
+import { PlayerCareerDetail } from '../../src/services/footballApi';
 import { C } from '../../src/theme';
 
 export default function Mode1Page() {
   const router = useRouter();
   const store = useGameStore();
   const [showHandoff, setShowHandoff] = useState(false);
+  const [resultCard, setResultCard] = useState<PlayerCareerDetail | null>(null);
+  const [resultOnClose, setResultOnClose] = useState<(() => void) | null>(null);
 
   // ─────────────────────────────────────────────
   // TAKIM SEÇİM AŞAMASI
@@ -182,17 +187,17 @@ export default function Mode1Page() {
   if (store.mode1Phase === 'guessing' && store.activeGuesser) {
     const guesser = store.activeGuesser;
 
-    function handleCorrect(playerName: string) {
+    function handleCorrect(detail: PlayerCareerDetail) {
       store.addScore(guesser);
       const newScore = guesser === 1 ? store.score1 + 1 : store.score2 + 1;
       if (newScore >= store.winScore) {
         const winnerName = guesser === 1 ? store.player1Name : store.player2Name;
-        router.replace({ pathname: '/game-over', params: { winner: winnerName } });
+        setResultCard(detail);
+        setResultOnClose(() => () => router.replace({ pathname: '/game-over', params: { winner: winnerName } }));
         return;
       }
-      Alert.alert('✅ DOĞRU!', `${playerName} her iki takımda oynamış!`, [
-        { text: 'SONRAKI TUR', onPress: () => store.nextMode1Round() },
-      ]);
+      setResultCard(detail);
+      setResultOnClose(() => () => { setResultCard(null); setResultOnClose(null); store.nextMode1Round(); });
     }
 
     function handleWrong(playerName: string) {
@@ -220,33 +225,65 @@ export default function Mode1Page() {
 
     // KeyboardAvoidingView SplitScreen içinde — FlatList nested ScrollView içinde değil
     const activeContent = (
-      <KeyboardAvoidingView
-        style={s.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      >
+      <View style={s.flex}>
         <Text style={s.teamHint}>
           {store.team1.name.toUpperCase()} × {store.team2.name.toUpperCase()}
         </Text>
+        {/* Modal tabanlı arama — overflow/kırpma sorunu yok */}
         <PlayerSearch
           team1Id={store.team1.apiId}
           team2Id={store.team2.apiId}
-          placeholder="TAHMİN"
-          onCorrect={handleCorrect}
+          placeholder="Oyuncu ara..."
+          onCorrect={(detail) => handleCorrect(detail)}
           onWrong={handleWrong}
         />
-        <TouchableOpacity style={[s.primaryBtn, { marginTop: 10 }]} onPress={handlePassPress}>
-          <Text style={s.primaryBtnText}>GÖNDER / GEÇ</Text>
+        <TouchableOpacity style={[s.skipBtn, { marginTop: 16 }]} onPress={handlePassPress}>
+          <Text style={s.skipBtnText}>GEÇ</Text>
         </TouchableOpacity>
-      </KeyboardAvoidingView>
+      </View>
     );
 
     return (
-      <SplitScreen
-        activePlayer={guesser}
-        player1Name={store.player1Name}
-        player2Name={store.player2Name}
-        activeContent={activeContent}
-      />
+      <>
+        <SplitScreen
+          activePlayer={guesser}
+          player1Name={store.player1Name}
+          player2Name={store.player2Name}
+          activeContent={activeContent}
+        />
+        <Modal
+          visible={!!resultCard}
+          transparent
+          animationType="fade"
+          onRequestClose={() => resultOnClose?.()}
+        >
+          <View style={s.resultOverlay}>
+            <View style={s.resultCard}>
+              <Text style={s.resultBadge}>✅ DOĞRU!</Text>
+              {resultCard?.playerPhoto ? (
+                <Image source={{ uri: resultCard.playerPhoto }} style={s.resultPhoto} />
+              ) : (
+                <View style={s.resultPhotoPlaceholder} />
+              )}
+              <Text style={s.resultName}>{resultCard?.playerName}</Text>
+              <View style={s.resultPeriods}>
+                <View style={s.periodRow}>
+                  <Text style={s.periodTeam}>{store.team1.name.toUpperCase()}</Text>
+                  <Text style={s.periodYears}>{resultCard?.team1Period}</Text>
+                </View>
+                <View style={s.periodDivider} />
+                <View style={s.periodRow}>
+                  <Text style={s.periodTeam}>{store.team2.name.toUpperCase()}</Text>
+                  <Text style={s.periodYears}>{resultCard?.team2Period}</Text>
+                </View>
+              </View>
+              <TouchableOpacity style={s.resultBtn} onPress={() => resultOnClose?.()} activeOpacity={0.8}>
+                <Text style={s.resultBtnText}>DEVAM →</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+      </>
     );
   }
 
@@ -285,4 +322,77 @@ const s = StyleSheet.create({
   sameTeamBadge: { marginTop: 16, borderWidth: 1, borderColor: C.green, borderRadius: 6, paddingHorizontal: 16, paddingVertical: 10 },
   sameTeamText: { color: C.green, fontSize: 11, fontWeight: '700', letterSpacing: 2, textAlign: 'center' },
   teamHint: { fontSize: 10, color: C.textMuted, letterSpacing: 2, fontWeight: '700', marginBottom: 12 },
+
+  resultOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.85)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 28,
+  },
+  resultCard: {
+    width: '100%',
+    backgroundColor: C.bgCard,
+    borderWidth: 1,
+    borderColor: C.green,
+    borderRadius: 12,
+    alignItems: 'center',
+    paddingVertical: 32,
+    paddingHorizontal: 24,
+  },
+  resultBadge: {
+    fontSize: 13,
+    fontWeight: '900',
+    color: C.green,
+    letterSpacing: 4,
+    marginBottom: 20,
+  },
+  resultPhoto: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    borderWidth: 2,
+    borderColor: C.green,
+    marginBottom: 16,
+  },
+  resultPhotoPlaceholder: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    backgroundColor: C.bgActive,
+    marginBottom: 16,
+  },
+  resultName: {
+    fontSize: 20,
+    fontWeight: '900',
+    color: C.textWhite,
+    letterSpacing: 1,
+    textAlign: 'center',
+    marginBottom: 24,
+  },
+  resultPeriods: {
+    width: '100%',
+    backgroundColor: C.bgActive,
+    borderRadius: 8,
+    paddingVertical: 4,
+    marginBottom: 28,
+  },
+  periodRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  periodDivider: { height: 1, backgroundColor: C.greenBorder, marginHorizontal: 16 },
+  periodTeam: { fontSize: 11, fontWeight: '700', color: C.textMuted, letterSpacing: 1, flex: 1 },
+  periodYears: { fontSize: 13, fontWeight: '900', color: C.green, letterSpacing: 1 },
+  resultBtn: {
+    backgroundColor: C.greenBtn,
+    borderRadius: 6,
+    paddingVertical: 14,
+    paddingHorizontal: 40,
+    alignItems: 'center',
+  },
+  resultBtnText: { color: C.bg, fontSize: 15, fontWeight: '900', letterSpacing: 4 },
 });

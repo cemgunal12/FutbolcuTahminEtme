@@ -51,14 +51,18 @@ const s = StyleSheet.create({
     paddingHorizontal: 24,
     paddingTop: 20,
     paddingBottom: 12,
+    // Dropdown'ın taşmasına izin ver (iOS), Android'de elevation devreye girer
+    overflow: 'visible',
+    zIndex: 10,
   },
   passiveHalf: {
     flex: 2,
     backgroundColor: C.bg,
     alignItems: 'center',
     justifyContent: 'center',
+    zIndex: 1,
   },
-  divider: { height: 2, backgroundColor: C.divider },
+  divider: { height: 2, backgroundColor: C.divider, zIndex: 5 },
   playerLabel: {
     fontSize: 12,
     fontWeight: '700',
@@ -66,7 +70,7 @@ const s = StyleSheet.create({
     letterSpacing: 3,
     marginBottom: 16,
   },
-  content: { flex: 1 },
+  content: { flex: 1, overflow: 'visible', zIndex: 10 },
   passiveLabel: {
     fontSize: 12,
     fontWeight: '700',
