@@ -1,7 +1,6 @@
-// NativeWind v4 için Metro bundler yapılandırması
+// Expo Metro bundler yapılandırması — NativeWind kullanılmıyor.
 const { getDefaultConfig } = require('expo/metro-config');
-const { withNativeWind } = require('nativewind/metro');
 
 const config = getDefaultConfig(__dirname);
 
-module.exports = withNativeWind(config, { input: './global.css' });
+module.exports = config;

@@ -1,6 +1,6 @@
-// Yatay ekranda ekranın ortasında görünen büyük HAZIR butonu.
-// İlk basan oyuncunun tarafını (1 veya 2) belirler.
-// Telefon yatay tutulduğunda üst yarı P1, alt yarı P2 tarafıdır.
+// Portrait split ekran: üstte P2 (180° dönmüş), altta P1.
+// Her yarıda oyuncu adı, anlık skoru ve HAZIR butonu bulunur.
+// İlk basan oyuncunun tarafı (1 veya 2) onPress ile bildirilir.
 
 import React, { useRef } from 'react';
 import {
@@ -8,87 +8,108 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
-  Dimensions,
 } from 'react-native';
+import { useGameStore } from '../store/gameStore';
+import { C } from '../theme';
 
-interface HazirButtonProps {
+interface Props {
   onPress: (side: 1 | 2) => void;
 }
 
-export default function HazirButton({ onPress }: HazirButtonProps) {
-  const pressedRef = useRef(false);
+export default function HazirButton({ onPress }: Props) {
+  const pressed = useRef(false);
+  const { player1Name, player2Name, score1, score2 } = useGameStore();
 
   function handlePress(side: 1 | 2) {
-    // İlk basıştan sonra diğer tarafın baskısını engelle
-    if (pressedRef.current) return;
-    pressedRef.current = true;
+    if (pressed.current) return;
+    pressed.current = true;
     onPress(side);
   }
 
   return (
-    <View style={styles.container}>
-      {/* P2 tarafı — üstte, 180 derece döndürülmüş */}
-      <TouchableOpacity
-        style={[styles.half, styles.topHalf]}
-        onPress={() => handlePress(2)}
-        activeOpacity={0.7}
-      >
-        <Text style={[styles.label, { transform: [{ rotate: '180deg' }] }]}>
-          {/* P2'nin ismi store'dan alınabilir ama burada generic tutuyoruz */}
-          HAZIR
-        </Text>
-        <Text style={[styles.sub, { transform: [{ rotate: '180deg' }] }]}>
-          Oyuncu 2
-        </Text>
-      </TouchableOpacity>
+    <View style={s.container}>
+      {/* P2 tarafı — üstte, 180° döndürülmüş */}
+      <View style={s.half}>
+        <View style={s.rotated}>
+          <Text style={s.playerLabel}>{player2Name.toUpperCase()}</Text>
+          <Text style={s.scoreText}>{score2}</Text>
+          <TouchableOpacity
+            style={s.hazirBtn}
+            onPress={() => handlePress(2)}
+            activeOpacity={0.7}
+          >
+            <Text style={s.hazirText}>HAZIR</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
 
-      {/* Ortadaki çizgi */}
-      <View style={styles.divider} />
+      {/* Bölücü çizgi */}
+      <View style={s.divider} />
 
       {/* P1 tarafı — altta, normal */}
-      <TouchableOpacity
-        style={[styles.half, styles.bottomHalf]}
-        onPress={() => handlePress(1)}
-        activeOpacity={0.7}
-      >
-        <Text style={styles.sub}>Oyuncu 1</Text>
-        <Text style={styles.label}>HAZIR</Text>
-      </TouchableOpacity>
+      <View style={s.half}>
+        <Text style={s.playerLabel}>{player1Name.toUpperCase()}</Text>
+        <Text style={s.scoreText}>{score1}</Text>
+        <TouchableOpacity
+          style={s.hazirBtn}
+          onPress={() => handlePress(1)}
+          activeOpacity={0.7}
+        >
+          <Text style={s.hazirText}>HAZIR</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
 
-const { width, height } = Dimensions.get('window');
-
-const styles = StyleSheet.create({
+const s = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0f172a',
+    backgroundColor: C.bg,
   },
   half: {
     flex: 1,
+    backgroundColor: C.bgActive,
     alignItems: 'center',
     justifyContent: 'center',
+    paddingHorizontal: 32,
   },
-  topHalf: {
-    backgroundColor: '#1e3a5f',
-  },
-  bottomHalf: {
-    backgroundColor: '#1a3a2f',
+  // P2 içeriğini tutan wrapper — 180° döndürür
+  rotated: {
+    transform: [{ rotate: '180deg' }],
+    alignItems: 'center',
+    width: '100%',
   },
   divider: {
-    height: 4,
-    backgroundColor: '#f59e0b',
+    height: 3,
+    backgroundColor: C.divider,
   },
-  label: {
-    fontSize: 48,
-    fontWeight: 'bold',
-    color: '#f59e0b',
+  playerLabel: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: C.textMuted,
+    letterSpacing: 3,
+    marginBottom: 8,
+  },
+  scoreText: {
+    fontSize: 64,
+    fontWeight: '900',
+    color: C.green,
+    lineHeight: 70,
+    marginBottom: 20,
+  },
+  hazirBtn: {
+    backgroundColor: C.greenBtn,
+    borderRadius: 6,
+    paddingVertical: 14,
+    paddingHorizontal: 40,
+    alignItems: 'center',
+    width: '100%',
+  },
+  hazirText: {
+    color: C.bg,
+    fontSize: 18,
+    fontWeight: '900',
     letterSpacing: 4,
-  },
-  sub: {
-    fontSize: 16,
-    color: '#94a3b8',
-    marginVertical: 8,
   },
 });

@@ -6,7 +6,6 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
-    "newArchEnabled": false,
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
@@ -25,7 +24,10 @@
     },
     "plugins": [
       "expo-router",
-      "expo-screen-orientation"
+      "expo-screen-orientation",
+      "expo-asset",
+      "expo-font",
+      "expo-web-browser"
     ],
     "scheme": "futbolcutahmin"
   }

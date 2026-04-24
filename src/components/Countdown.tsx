@@ -1,52 +1,74 @@
-// 3-2-1 geri sayım animasyonu.
-// Sayı büyüyüp küçülerek görünür, bitince onFinish callback'i tetiklenir.
-// Takım seçiminden sonra iki takımın açıklanmasından önce çalışır.
+// 3-2-1 geri sayım animasyonu — spring ile büyüyüp küçülür.
+// Bitince onFinish callback'i çağrılır.
 
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, Animated } from 'react-native';
+import { View, Text, Animated, StyleSheet } from 'react-native';
+import { C } from '../theme';
 
-interface CountdownProps {
+interface Props {
   onFinish: () => void;
 }
 
-export default function Countdown({ onFinish }: CountdownProps) {
+export default function Countdown({ onFinish }: Props) {
   const [count, setCount] = useState(3);
-  const scaleAnim = useRef(new Animated.Value(0.5)).current;
+  const scale = useRef(new Animated.Value(0.3)).current;
+  const opacity = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    animateCount();
-  }, [count]);
+    scale.setValue(0.3);
+    opacity.setValue(0);
 
-  function animateCount() {
-    scaleAnim.setValue(0.5);
-    Animated.spring(scaleAnim, {
-      toValue: 1,
-      tension: 80,
-      friction: 5,
-      useNativeDriver: true,
-    }).start(() => {
+    Animated.parallel([
+      Animated.spring(scale, {
+        toValue: 1,
+        tension: 70,
+        friction: 5,
+        useNativeDriver: true,
+      }),
+      Animated.timing(opacity, {
+        toValue: 1,
+        duration: 150,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
       setTimeout(() => {
         if (count > 1) {
-          setCount((c) => c - 1);
+          setCount(c => c - 1);
         } else {
-          // Geri sayım bitti
           onFinish();
         }
-      }, 700);
+      }, 650);
     });
-  }
+  }, [count]);
 
   return (
-    <View className="flex-1 items-center justify-center bg-slate-900">
-      <Animated.Text
-        style={[
-          { fontSize: 120, fontWeight: 'bold', color: '#f59e0b' },
-          { transform: [{ scale: scaleAnim }] },
-        ]}
-      >
+    <View style={s.container}>
+      <Text style={s.label}>HAZIRLANIN!</Text>
+      <Animated.Text style={[s.number, { transform: [{ scale }], opacity }]}>
         {count}
       </Animated.Text>
-      <Text className="text-slate-400 text-lg mt-4">Hazırlanın!</Text>
     </View>
   );
 }
+
+const s = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: C.bg,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  label: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: C.textMuted,
+    letterSpacing: 4,
+    marginBottom: 24,
+  },
+  number: {
+    fontSize: 140,
+    fontWeight: '900',
+    color: C.green,
+    lineHeight: 150,
+  },
+});

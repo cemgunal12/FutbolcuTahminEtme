@@ -1,6 +1,5 @@
-// Ana sayfa: oyuncu isimlerini gir, oyun modunu ve kazanma skorunu seç.
-// Tüm seçimler Zustand store'a kaydedilir.
-// Validasyon geçtikten sonra seçilen moda yönlendirme yapılır.
+// Ana sayfa: oyuncu isimlerini gir, hedef skoru ve oyun modunu seç.
+// Tasarım: siyah-yeşil arka plan, neon yeşil aksan, tümü büyük harf.
 
 import React, { useState } from 'react';
 import {
@@ -12,9 +11,12 @@ import {
   Platform,
   ScrollView,
   Alert,
+  StyleSheet,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useGameStore, GameMode, WinScore } from '../src/store/gameStore';
+import { C } from '../src/theme';
 
 const WIN_SCORES: WinScore[] = [3, 5, 7, 10];
 
@@ -25,165 +27,204 @@ export default function HomePage() {
   const [p1, setP1] = useState('');
   const [p2, setP2] = useState('');
   const [mode, setMode] = useState<GameMode>('mode1');
-  const [score, setScore] = useState<WinScore>(5);
+  const [score, setScore] = useState<WinScore>(3);
 
   function handleStart() {
     if (!p1.trim() || !p2.trim()) {
-      Alert.alert('Hata', 'Her iki oyuncunun ismini giriniz.');
+      Alert.alert('HATA', 'Her iki oyuncunun ismini giriniz.');
       return;
     }
-    if (p1.trim() === p2.trim()) {
-      Alert.alert('Hata', 'Oyuncu isimleri farklı olmalı.');
-      return;
-    }
-
     resetGame();
     setPlayers(p1.trim(), p2.trim());
     setGameMode(mode);
     setWinScore(score);
-
     router.push(mode === 'mode1' ? '/mode1' : '/mode2');
   }
 
   return (
-    <KeyboardAvoidingView
-      className="flex-1 bg-slate-900"
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
-      <ScrollView
-        contentContainerStyle={{ flexGrow: 1 }}
-        keyboardShouldPersistTaps="handled"
+    <SafeAreaView style={s.safe}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-        <View className="flex-1 px-6 py-12 justify-center">
+        <ScrollView
+          contentContainerStyle={s.scroll}
+          keyboardShouldPersistTaps="handled"
+        >
           {/* Başlık */}
-          <View className="items-center mb-10">
-            <Text className="text-5xl">⚽</Text>
-            <Text className="text-white text-3xl font-bold mt-3">
-              Futbolcu Tahmin
-            </Text>
-            <Text className="text-slate-400 text-base mt-1">
-              İki kişilik bilgi oyunu
-            </Text>
+          <View style={s.headerBlock}>
+            <Text style={s.title}>FUTBOL</Text>
+            <Text style={s.subtitle}>TAHMİN OYUNU</Text>
           </View>
 
-          {/* Oyuncu isimleri */}
-          <View className="mb-8">
-            <Text className="text-slate-300 text-sm font-semibold mb-2 uppercase tracking-wider">
-              Oyuncu İsimleri
-            </Text>
+          {/* Oyuncu inputları */}
+          <View style={s.section}>
             <TextInput
-              className="bg-slate-700 text-white px-4 py-3 rounded-xl mb-3 text-base border border-slate-600"
-              placeholder="Oyuncu 1 adı"
-              placeholderTextColor="#64748b"
+              style={s.input}
+              placeholder="OYUNCU 1"
+              placeholderTextColor={C.textMuted}
               value={p1}
               onChangeText={setP1}
-              autoCapitalize="words"
+              autoCapitalize="characters"
               returnKeyType="next"
             />
             <TextInput
-              className="bg-slate-700 text-white px-4 py-3 rounded-xl text-base border border-slate-600"
-              placeholder="Oyuncu 2 adı"
-              placeholderTextColor="#64748b"
+              style={[s.input, { marginTop: 12 }]}
+              placeholder="OYUNCU 2"
+              placeholderTextColor={C.textMuted}
               value={p2}
               onChangeText={setP2}
-              autoCapitalize="words"
+              autoCapitalize="characters"
               returnKeyType="done"
             />
           </View>
 
-          {/* Oyun modu seçimi */}
-          <View className="mb-8">
-            <Text className="text-slate-300 text-sm font-semibold mb-3 uppercase tracking-wider">
-              Oyun Modu
-            </Text>
-            <View className="flex-row gap-3">
+          {/* Mod seçimi */}
+          <View style={s.section}>
+            <Text style={s.label}>OYUN MODU</Text>
+            <View style={s.modeRow}>
               <TouchableOpacity
-                className={`flex-1 rounded-xl p-4 border-2 ${
-                  mode === 'mode1'
-                    ? 'bg-blue-600 border-blue-400'
-                    : 'bg-slate-700 border-slate-600'
-                }`}
+                style={[s.modeBtn, mode === 'mode1' && s.modeBtnActive]}
                 onPress={() => setMode('mode1')}
               >
-                <Text className="text-white font-bold text-center text-base">
-                  Mod 1
+                <Text style={[s.modeBtnText, mode === 'mode1' && s.modeBtnTextActive]}>
+                  MOD 1
                 </Text>
-                <Text className="text-slate-300 text-center text-xs mt-1">
-                  Takım Tahmin
-                </Text>
+                <Text style={s.modeDesc}>TAKIM TAHMİN</Text>
               </TouchableOpacity>
-
               <TouchableOpacity
-                className={`flex-1 rounded-xl p-4 border-2 ${
-                  mode === 'mode2'
-                    ? 'bg-purple-600 border-purple-400'
-                    : 'bg-slate-700 border-slate-600'
-                }`}
+                style={[s.modeBtn, mode === 'mode2' && s.modeBtnActive]}
                 onPress={() => setMode('mode2')}
               >
-                <Text className="text-white font-bold text-center text-base">
-                  Mod 2
+                <Text style={[s.modeBtnText, mode === 'mode2' && s.modeBtnTextActive]}>
+                  MOD 2
                 </Text>
-                <Text className="text-slate-300 text-center text-xs mt-1">
-                  Ülke & Takım
-                </Text>
+                <Text style={s.modeDesc}>ÜLKE & TAKIM</Text>
               </TouchableOpacity>
-            </View>
-
-            {/* Mod açıklaması */}
-            <View className="mt-3 bg-slate-800 rounded-xl p-3">
-              {mode === 'mode1' ? (
-                <Text className="text-slate-400 text-sm">
-                  Her oyuncu bir takım seçer. Ortak oyuncuyu tahmin et!
-                </Text>
-              ) : (
-                <Text className="text-slate-400 text-sm">
-                  Sıradaki oyuncu ülke veya takım seçer, diğeri tahmin eder.
-                </Text>
-              )}
             </View>
           </View>
 
-          {/* Kazanma skoru */}
-          <View className="mb-10">
-            <Text className="text-slate-300 text-sm font-semibold mb-3 uppercase tracking-wider">
-              Kazanma Skoru
-            </Text>
-            <View className="flex-row gap-3">
-              {WIN_SCORES.map((s) => (
+          {/* Hedef skor */}
+          <View style={s.section}>
+            <Text style={s.label}>HEDEF SKOR</Text>
+            <View style={s.scoreRow}>
+              {WIN_SCORES.map((sc) => (
                 <TouchableOpacity
-                  key={s}
-                  className={`flex-1 py-3 rounded-xl border-2 ${
-                    score === s
-                      ? 'bg-yellow-500 border-yellow-400'
-                      : 'bg-slate-700 border-slate-600'
-                  }`}
-                  onPress={() => setScore(s)}
+                  key={sc}
+                  style={[s.scoreBtn, score === sc && s.scoreBtnActive]}
+                  onPress={() => setScore(sc)}
                 >
-                  <Text
-                    className={`text-center font-bold text-lg ${
-                      score === s ? 'text-slate-900' : 'text-white'
-                    }`}
-                  >
-                    {s}
+                  <Text style={[s.scoreBtnText, score === sc && s.scoreBtnTextActive]}>
+                    {sc}
                   </Text>
                 </TouchableOpacity>
               ))}
             </View>
           </View>
 
-          {/* Başlat butonu */}
-          <TouchableOpacity
-            className="bg-green-500 py-4 rounded-2xl items-center"
-            onPress={handleStart}
-            activeOpacity={0.8}
-          >
-            <Text className="text-white font-bold text-xl tracking-wider">
-              OYUNU BAŞLAT
-            </Text>
+          {/* Başlat */}
+          <TouchableOpacity style={s.startBtn} onPress={handleStart} activeOpacity={0.8}>
+            <Text style={s.startBtnText}>BAŞLA</Text>
           </TouchableOpacity>
-        </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
+
+const s = StyleSheet.create({
+  safe: { flex: 1, backgroundColor: C.bg },
+  scroll: { flexGrow: 1, paddingHorizontal: 24, paddingVertical: 32 },
+  headerBlock: { alignItems: 'center', marginBottom: 36, marginTop: 16 },
+  title: {
+    fontSize: 52,
+    fontWeight: '900',
+    color: C.green,
+    letterSpacing: 6,
+  },
+  subtitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: C.green,
+    letterSpacing: 4,
+    marginTop: 4,
+  },
+  section: { marginBottom: 24 },
+  label: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: C.textMuted,
+    letterSpacing: 3,
+    marginBottom: 10,
+  },
+  input: {
+    backgroundColor: C.bgCard,
+    borderWidth: 1,
+    borderColor: C.greenBorder,
+    borderRadius: 6,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    color: C.green,
+    fontSize: 15,
+    fontWeight: '700',
+    letterSpacing: 2,
+  },
+  modeRow: { flexDirection: 'row', gap: 12 },
+  modeBtn: {
+    flex: 1,
+    backgroundColor: C.bgCard,
+    borderWidth: 1,
+    borderColor: C.greenBorder,
+    borderRadius: 6,
+    paddingVertical: 14,
+    alignItems: 'center',
+  },
+  modeBtnActive: {
+    borderColor: C.green,
+    backgroundColor: C.bgActive,
+  },
+  modeBtnText: {
+    fontSize: 15,
+    fontWeight: '900',
+    color: C.textMuted,
+    letterSpacing: 2,
+  },
+  modeBtnTextActive: { color: C.green },
+  modeDesc: {
+    fontSize: 9,
+    color: C.textMuted,
+    letterSpacing: 2,
+    marginTop: 4,
+    fontWeight: '600',
+  },
+  scoreRow: { flexDirection: 'row', gap: 10 },
+  scoreBtn: {
+    flex: 1,
+    backgroundColor: C.bgCard,
+    borderWidth: 1,
+    borderColor: C.greenBorder,
+    borderRadius: 6,
+    paddingVertical: 14,
+    alignItems: 'center',
+  },
+  scoreBtnActive: { borderColor: C.green, backgroundColor: C.bgActive },
+  scoreBtnText: {
+    fontSize: 18,
+    fontWeight: '900',
+    color: C.textMuted,
+  },
+  scoreBtnTextActive: { color: C.green },
+  startBtn: {
+    backgroundColor: C.greenBtn,
+    borderRadius: 6,
+    paddingVertical: 18,
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  startBtnText: {
+    color: C.bg,
+    fontSize: 18,
+    fontWeight: '900',
+    letterSpacing: 4,
+  },
+});

@@ -25,7 +25,7 @@ export function useGameState() {
 
       if (newScore >= store.winScore) {
         // Kazanan var, oyun bitti
-        router.push({
+        router.replace({
           pathname: '/game-over',
           params: { winner: player === 1 ? store.player1Name : store.player2Name },
         });

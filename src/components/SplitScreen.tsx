@@ -1,119 +1,83 @@
-// Ekranı dikey olarak ikiye bölen bileşen.
-// Aktif olmayan oyuncunun tarafı 180 derece döndürülmüştür,
-// böylece her oyuncu kendi tarafından okuyabilir.
-// activePlayer: hangi oyuncu şu an tahmin yapıyor (alt taraf aktif görünür).
+// Tahmin aşaması için dikey split ekran.
+// Aktif oyuncu üstte (input + GÖNDER), pasif oyuncu altta (bekliyor).
+// Pasif taraf soluk gösterilir; SplitScreen içeriği dışarıdan prop ile gelir.
 
 import React from 'react';
-import { View, Text, StyleSheet, Dimensions } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
+import { C } from '../theme';
 
-interface SplitScreenProps {
+interface Props {
   activePlayer: 1 | 2;
   player1Name: string;
   player2Name: string;
-  topContent: React.ReactNode;
-  bottomContent: React.ReactNode;
+  // Aktif oyuncunun içeriği (input, butonlar)
+  activeContent: React.ReactNode;
 }
 
 export default function SplitScreen({
   activePlayer,
   player1Name,
   player2Name,
-  topContent,
-  bottomContent,
-}: SplitScreenProps) {
-  // P1 altta, P2 üstte (yatay ekranda)
-  // activePlayer=1 → alt (P1) aktif, üst (P2) soluk
-  // activePlayer=2 → üst (P2) aktif, alt (P1) soluk
+  activeContent,
+}: Props) {
+  const activeName  = activePlayer === 1 ? player1Name  : player2Name;
+  const passiveName = activePlayer === 1 ? player2Name  : player1Name;
 
   return (
-    <View style={styles.container}>
-      {/* P2 tarafı — üstte, 180° döndürülmüş */}
-      <View
-        style={[
-          styles.half,
-          activePlayer === 2 ? styles.activeHalf : styles.inactiveHalf,
-        ]}
-      >
-        <View style={{ transform: [{ rotate: '180deg' }], flex: 1, width: '100%' }}>
-          <View style={styles.playerLabel}>
-            <Text style={styles.playerName}>{player2Name}</Text>
-            {activePlayer === 2 && (
-              <View style={styles.activeBadge}>
-                <Text style={styles.activeBadgeText}>SIRA SENİN</Text>
-              </View>
-            )}
-          </View>
-          <View style={styles.content}>{topContent}</View>
-        </View>
+    <View style={s.container}>
+      {/* Üst yarı — her zaman aktif oyuncuyu gösterir */}
+      <View style={s.activeHalf}>
+        <Text style={s.playerLabel}>{activeName.toUpperCase()}</Text>
+        <View style={s.content}>{activeContent}</View>
       </View>
 
-      {/* Orta çizgi */}
-      <View style={styles.divider} />
+      {/* Bölücü */}
+      <View style={s.divider} />
 
-      {/* P1 tarafı — altta, normal */}
-      <View
-        style={[
-          styles.half,
-          activePlayer === 1 ? styles.activeHalf : styles.inactiveHalf,
-        ]}
-      >
-        <View style={styles.playerLabel}>
-          <Text style={styles.playerName}>{player1Name}</Text>
-          {activePlayer === 1 && (
-            <View style={styles.activeBadge}>
-              <Text style={styles.activeBadgeText}>SIRA SENİN</Text>
-            </View>
-          )}
-        </View>
-        <View style={styles.content}>{bottomContent}</View>
+      {/* Alt yarı — pasif oyuncu */}
+      <View style={s.passiveHalf}>
+        <Text style={s.passiveLabel}>{passiveName.toUpperCase()}</Text>
+        <Text style={s.waitText}>BEKLİYOR...</Text>
       </View>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#0f172a',
-  },
-  half: {
-    flex: 1,
-    padding: 16,
-  },
+const s = StyleSheet.create({
+  container: { flex: 1, backgroundColor: C.bg },
   activeHalf: {
-    backgroundColor: '#1e293b',
+    flex: 3,
+    backgroundColor: C.bgActive,
+    paddingHorizontal: 24,
+    paddingTop: 20,
+    paddingBottom: 12,
   },
-  inactiveHalf: {
-    backgroundColor: '#0f172a',
-    opacity: 0.5,
-  },
-  divider: {
-    height: 3,
-    backgroundColor: '#f59e0b',
-  },
-  playerLabel: {
-    flexDirection: 'row',
+  passiveHalf: {
+    flex: 2,
+    backgroundColor: C.bg,
     alignItems: 'center',
-    marginBottom: 12,
-    gap: 8,
+    justifyContent: 'center',
   },
-  playerName: {
-    color: '#f8fafc',
-    fontSize: 16,
-    fontWeight: 'bold',
+  divider: { height: 2, backgroundColor: C.divider },
+  playerLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: C.textMuted,
+    letterSpacing: 3,
+    marginBottom: 16,
   },
-  activeBadge: {
-    backgroundColor: '#f59e0b',
-    borderRadius: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
+  content: { flex: 1 },
+  passiveLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: C.greenDim,
+    letterSpacing: 3,
+    marginBottom: 8,
   },
-  activeBadgeText: {
-    color: '#0f172a',
-    fontSize: 10,
-    fontWeight: 'bold',
-  },
-  content: {
-    flex: 1,
+  waitText: {
+    fontSize: 11,
+    color: C.greenDim,
+    letterSpacing: 2,
+    fontWeight: '600',
   },
 });

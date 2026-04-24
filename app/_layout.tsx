@@ -1,22 +1,20 @@
-// Expo Router kök layout dosyası.
-// NativeWind CSS import'u ve Stack navigatör burada tanımlanır.
-// Tüm sayfalar bu layout içinde render edilir.
+// Expo Router kök layout — SafeAreaProvider, Stack navigatör ve StatusBar.
 
-import '../global.css';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 export default function RootLayout() {
   return (
-    <>
+    <SafeAreaProvider>
       <StatusBar style="light" />
       <Stack
         screenOptions={{
           headerShown: false,
-          contentStyle: { backgroundColor: '#0f172a' },
+          contentStyle: { backgroundColor: '#0a0d0a' },
           animation: 'slide_from_right',
         }}
       />
-    </>
+    </SafeAreaProvider>
   );
 }
