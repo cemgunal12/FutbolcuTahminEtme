@@ -1,7 +1,3 @@
-// Takım arama bileşeni.
-// Dropdown absolute pozisyonlanmış + elevation — parent container kırpması yok.
-// Seçim sonrası onSelect callback'i (name, id) ile tetiklenir.
-
 import React, { useState, useRef, useCallback } from 'react';
 import {
   View,
@@ -13,19 +9,21 @@ import {
   StyleSheet,
   Image,
 } from 'react-native';
-import { searchTeams, TeamResult } from '../services/footballApi';
+import { searchTeams, searchNationalTeams, TeamResult } from '../services/footballApi';
 import { C } from '../theme';
 
 interface Props {
   placeholder?: string;
-  onSelect: (name: string, id: number) => void;
+  onSelect: (name: string, id: string) => void;
   initialValue?: string;
+  searchType?: 'club' | 'national';
 }
 
 export default function TeamSearch({
   placeholder = 'TAKIM ARA...',
   onSelect,
   initialValue = '',
+  searchType = 'club',
 }: Props) {
   const [query, setQuery] = useState(initialValue);
   const [results, setResults] = useState<TeamResult[]>([]);
@@ -41,13 +39,15 @@ export default function TeamSearch({
       setResults([]);
       return;
     }
-    timer.current = setTimeout(async () => {
+    timer.current = setTimeout(() => {
       setLoading(true);
-      const data = await searchTeams(text);
-      setResults(data.slice(0, 7));
+      const data = searchType === 'national'
+        ? searchNationalTeams(text)
+        : searchTeams(text);
+      setResults(data);
       setLoading(false);
-    }, 400);
-  }, []);
+    }, 200);
+  }, [searchType]);
 
   function handleSelect(item: TeamResult) {
     setQuery(item.team.name);
@@ -58,7 +58,6 @@ export default function TeamSearch({
 
   return (
     <View style={s.wrapper}>
-      {/* Input satırı */}
       <View style={s.inputRow}>
         <TextInput
           style={s.input}
@@ -77,7 +76,6 @@ export default function TeamSearch({
         }
       </View>
 
-      {/* Absolute dropdown */}
       {results.length > 0 && (
         <View style={s.dropdownContainer}>
           <ScrollView
@@ -103,7 +101,9 @@ export default function TeamSearch({
                 )}
                 <View>
                   <Text style={s.dropName}>{item.team.name}</Text>
-                  <Text style={s.dropSub}>{item.team.country}</Text>
+                  {item.team.country ? (
+                    <Text style={s.dropSub}>{item.team.country}</Text>
+                  ) : null}
                 </View>
               </TouchableOpacity>
             ))}

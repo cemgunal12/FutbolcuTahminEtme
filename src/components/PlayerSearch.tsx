@@ -1,7 +1,3 @@
-// Oyuncu arama bileşeni — Modal tabanlı.
-// Seçim yapıldıktan SONRA API ile kariyer doğrulama yapılır.
-// Doğruysa onCorrect(detail), yanlışsa onWrong(name) callback'i tetiklenir.
-
 import React, { useState, useRef, useCallback } from 'react';
 import {
   View,
@@ -26,8 +22,9 @@ import {
 import { C } from '../theme';
 
 interface Props {
-  team1Id: number | null;
-  team2Id: number | null;
+  team1Id: string | null;
+  team2Id: string | null;
+  searchType?: 'club-club' | 'national-club';
   placeholder?: string;
   onCorrect: (detail: PlayerCareerDetail) => void;
   onWrong: (name: string) => void;
@@ -37,6 +34,7 @@ interface Props {
 export default function PlayerSearch({
   team1Id,
   team2Id,
+  searchType = 'club-club',
   placeholder = 'Oyuncu ara...',
   onCorrect,
   onWrong,
@@ -46,7 +44,6 @@ export default function PlayerSearch({
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<PlayerResult[]>([]);
   const [loading, setLoading] = useState(false);
-  const [verifying, setVerifying] = useState(false);
   const [selectedName, setSelectedName] = useState('');
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -56,15 +53,14 @@ export default function PlayerSearch({
       if (timer.current) clearTimeout(timer.current);
       if (text.length < 3) { setResults([]); return; }
 
-      timer.current = setTimeout(async () => {
-        if (!team1Id || !team2Id) return;
+      timer.current = setTimeout(() => {
         setLoading(true);
-        const data = await searchPlayers(text, team1Id, team2Id);
+        const data = searchPlayers(text, team1Id, team2Id, searchType);
         setResults(data);
         setLoading(false);
-      }, 800);
+      }, 150);
     },
-    [team1Id, team2Id]
+    [team1Id, team2Id, searchType]
   );
 
   async function handleSelect(item: PlayerResult) {
@@ -72,28 +68,15 @@ export default function PlayerSearch({
     setQuery('');
     setResults([]);
     setSelectedName(item.player.name);
-    setVerifying(true);
-
-    if (!team1Id || !team2Id) {
-      setVerifying(false);
-      onCorrect({
-        playerName: item.player.name,
-        playerPhoto: item.player.photo,
-        team1Period: '—',
-        team2Period: '—',
-        isCorrect: true,
-      });
-      return;
-    }
 
     const detail = await verifyAndGetCareer(
       item.player.id,
       item.player.name,
       item.player.photo,
       team1Id,
-      team2Id
+      team2Id,
+      searchType,
     );
-    setVerifying(false);
 
     if (detail.isCorrect) {
       onCorrect(detail);
@@ -104,7 +87,7 @@ export default function PlayerSearch({
   }
 
   function openModal() {
-    if (disabled || verifying) return;
+    if (disabled) return;
     setQuery('');
     setResults([]);
     setModalOpen(true);
@@ -112,35 +95,23 @@ export default function PlayerSearch({
 
   return (
     <>
-      {/* Tetikleyici — Modal'ı açar */}
       <TouchableOpacity
         style={[s.trigger, disabled && { opacity: 0.4 }]}
         onPress={openModal}
         activeOpacity={0.8}
       >
-        {verifying ? (
-          <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-            <ActivityIndicator size="small" color={C.green} />
-            <Text style={[s.triggerMuted, { marginLeft: 10 }]}>
-              Kariyer kontrol ediliyor...
-            </Text>
-          </View>
-        ) : (
-          <Text style={selectedName ? s.triggerFilled : s.triggerMuted}>
-            {selectedName || placeholder}
-          </Text>
-        )}
+        <Text style={selectedName ? s.triggerFilled : s.triggerMuted}>
+          {selectedName || placeholder}
+        </Text>
         <Text style={{ fontSize: 16 }}>🔍</Text>
       </TouchableOpacity>
 
-      {/* Tam ekran arama Modal'ı */}
       <Modal visible={modalOpen} animationType="slide" onRequestClose={() => setModalOpen(false)}>
         <SafeAreaView style={s.modalSafe}>
           <KeyboardAvoidingView
             style={{ flex: 1 }}
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           >
-            {/* Başlık */}
             <View style={s.header}>
               <Text style={s.headerTitle}>OYUNCU ARA</Text>
               <TouchableOpacity onPress={() => setModalOpen(false)} style={s.closeBtn}>
@@ -148,7 +119,6 @@ export default function PlayerSearch({
               </TouchableOpacity>
             </View>
 
-            {/* Input */}
             <View style={s.inputRow}>
               <TextInput
                 style={s.input}
@@ -166,11 +136,10 @@ export default function PlayerSearch({
               )}
             </View>
 
-            {/* Sonuçlar */}
             {results.length > 0 ? (
               <FlatList
                 data={results}
-                keyExtractor={item => String(item.player.id)}
+                keyExtractor={item => item.player.id}
                 keyboardShouldPersistTaps="handled"
                 style={s.list}
                 renderItem={({ item }) => (
@@ -186,9 +155,6 @@ export default function PlayerSearch({
                     )}
                     <View style={{ flex: 1 }}>
                       <Text style={s.playerName}>{item.player.name}</Text>
-                      <Text style={s.playerTeam}>
-                        {item.statistics[0]?.team?.name ?? '—'}
-                      </Text>
                     </View>
                     <Text style={s.arrow}>›</Text>
                   </TouchableOpacity>
@@ -270,7 +236,6 @@ const s = StyleSheet.create({
     marginRight: 14,
   },
   playerName: { color: C.textWhite, fontSize: 15, fontWeight: '700' },
-  playerTeam: { color: C.textMuted, fontSize: 11, marginTop: 2, letterSpacing: 1 },
   arrow: { color: C.greenBorder, fontSize: 24 },
 
   emptyBox: { flex: 1, alignItems: 'center', justifyContent: 'center' },

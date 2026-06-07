@@ -66,7 +66,7 @@ export default function Mode2Page() {
       );
     }
 
-    function handleTeamSelected(name: string, id: number) {
+    function handleTeamSelected(name: string, id: string) {
       store.setTeam(activePlayerNum, { name, apiId: id });
     }
 
@@ -103,7 +103,11 @@ export default function Mode2Page() {
           </View>
 
           <View style={s.bottomSection}>
-            <TeamSearch placeholder={searchPlaceholder} onSelect={handleTeamSelected} />
+            <TeamSearch
+                placeholder={searchPlaceholder}
+                onSelect={handleTeamSelected}
+                searchType={isCountryPicker ? 'national' : 'club'}
+              />
             <TouchableOpacity
               style={[s.primaryBtn, { marginTop: 12 }, !currentTeam.name && s.btnDisabled]}
               onPress={handleConfirm}
@@ -192,6 +196,9 @@ export default function Mode2Page() {
   // ─────────────────────────────────────────────
   if (store.mode2Phase === 'guessing' && store.activeGuesser) {
     const guesser = store.activeGuesser;
+    // currentTurn ülkeyi seçti — o takım milli takım, diğeri kulüp
+    const ulkeTeam = store.currentTurn === 1 ? store.team1 : store.team2;
+    const takimTeam = store.currentTurn === 1 ? store.team2 : store.team1;
 
     function handleCorrect(detail: PlayerCareerDetail) {
       store.addScore(guesser);
@@ -235,8 +242,9 @@ export default function Mode2Page() {
           🌍 {store.team1.name.toUpperCase()} × ⚽ {store.team2.name.toUpperCase()}
         </Text>
         <PlayerSearch
-          team1Id={store.team1.apiId}
-          team2Id={store.team2.apiId}
+          team1Id={ulkeTeam.apiId}
+          team2Id={takimTeam.apiId}
+          searchType="national-club"
           placeholder="Oyuncu ara..."
           onCorrect={(detail) => handleCorrect(detail)}
           onWrong={handleWrong}

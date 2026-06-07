@@ -10,7 +10,7 @@ export type WinScore = 3 | 5 | 7 | 10;
 // Mod 1'deki bir turdaki takım bilgisi
 export interface TeamInfo {
   name: string;
-  apiId: number | null;
+  apiId: string | null;
 }
 
 // Mod 1 tur aşamaları

@@ -61,7 +61,7 @@ export default function Mode1Page() {
       );
     }
 
-    function handleTeamSelected(name: string, id: number) {
+    function handleTeamSelected(name: string, id: string) {
       store.setTeam(activePlayerNum, { name, apiId: id });
     }
 
