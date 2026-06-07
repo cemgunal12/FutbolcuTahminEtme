@@ -22,12 +22,13 @@ export type Mode1Phase =
   | 'guessing'         // Aktif oyuncu ortak oyuncu tahmin ediyor
   | 'round-end';       // Tur bitti, sıradaki tura geçiş
 
-// Mod 2 tur aşamaları
+// Mod 2 tur aşamaları (Mod 1 ile aynı akış)
 export type Mode2Phase =
-  | 'choosing'         // Sıradaki oyuncu ülke/takım giriyor
-  | 'hazir'            // Diğer oyuncu HAZIR'a basacak
-  | 'guessing'         // Tahmin yapılıyor
-  | 'round-end';
+  | 'team-select'      // İlk oyuncu ülke, ikinci oyuncu takım seçer
+  | 'countdown'        // 3-2-1 geri sayım
+  | 'reveal'           // Ülke ve takım açıklanıyor
+  | 'hazir'            // HAZIR butonu bekleniyor
+  | 'guessing';        // Ortak futbolcu tahmin ediliyor
 
 export interface GameState {
   // --- Ortak ---
@@ -50,8 +51,6 @@ export interface GameState {
 
   // --- Mod 2 ---
   mode2Phase: Mode2Phase;
-  currentClue: string;      // Seçilen ülke/takım adı
-  chooserIndex: 1 | 2;     // Satranç mantığı: kim seçiyor (gizli)
 
   // --- Actions ---
   setPlayers: (p1: string, p2: string) => void;
@@ -70,8 +69,7 @@ export interface GameState {
 
   // Mod 2 actions
   setMode2Phase: (phase: Mode2Phase) => void;
-  setCurrentClue: (clue: string) => void;
-  nextMode2Round: (correct: boolean) => void;
+  nextMode2Round: () => void;
 }
 
 const initialState = {
@@ -89,9 +87,7 @@ const initialState = {
   activeGuesser: null as 1 | 2 | null,
   p1Passed: false,
   p2Passed: false,
-  mode2Phase: 'choosing' as Mode2Phase,
-  currentClue: '',
-  chooserIndex: 1 as 1 | 2,
+  mode2Phase: 'team-select' as Mode2Phase,
 };
 
 export const useGameStore = create<GameState>((set, get) => ({
@@ -137,13 +133,16 @@ export const useGameStore = create<GameState>((set, get) => ({
 
   // Mod 2 actions
   setMode2Phase: (phase) => set({ mode2Phase: phase }),
-  setCurrentClue: (clue) => set({ currentClue: clue }),
 
-  nextMode2Round: (correct) =>
+  nextMode2Round: () =>
     set((state) => ({
-      mode2Phase: 'choosing',
-      currentClue: '',
-      // Doğruysa +1, sonra roller değişir; yanlışsa roller değişmeden devam
-      chooserIndex: state.chooserIndex === 1 ? 2 : 1,
+      mode2Phase: 'team-select',
+      team1: { name: '', apiId: null },
+      team2: { name: '', apiId: null },
+      teamSelectStep: 1,
+      currentTurn: state.currentTurn === 1 ? 2 : 1,
+      activeGuesser: null,
+      p1Passed: false,
+      p2Passed: false,
     })),
 }));
