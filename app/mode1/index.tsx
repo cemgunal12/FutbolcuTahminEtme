@@ -95,7 +95,7 @@ export default function Mode1Page() {
         >
           {/* Başlık */}
           <View style={s.playerHeader}>
-            <Text style={s.playerNum}>{activePlayerNum}. OYUNCU</Text>
+            <Text style={s.playerNum}>{activeName.toUpperCase()}</Text>
             <Text style={s.playerSubtitle}>TAKIMINI SEÇSİN</Text>
           </View>
 
@@ -125,7 +125,7 @@ export default function Mode1Page() {
     return (
       <SafeAreaView style={s.safe}>
         <ScoreBoard />
-        <Countdown onFinish={() => store.setMode1Phase('hazir')} />
+        <Countdown onFinish={() => store.setMode1Phase('reveal')} />
       </SafeAreaView>
     );
   }
