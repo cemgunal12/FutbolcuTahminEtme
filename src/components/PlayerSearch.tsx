@@ -11,6 +11,7 @@ import {
   Image,
   Platform,
   KeyboardAvoidingView,
+  InputAccessoryView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
@@ -21,13 +22,16 @@ import {
 } from '../services/footballApi';
 import { C } from '../theme';
 
+const PASS_ACCESSORY_ID = 'player-search-pass';
+
 interface Props {
   team1Id: string | null;
   team2Id: string | null;
   searchType?: 'club-club' | 'national-club';
   placeholder?: string;
   onCorrect: (detail: PlayerCareerDetail) => void;
-  onWrong: (name: string) => void;
+  onWrong: (detail: PlayerCareerDetail) => void;
+  onPass?: () => void;
   disabled?: boolean;
 }
 
@@ -38,6 +42,7 @@ export default function PlayerSearch({
   placeholder = 'Oyuncu ara...',
   onCorrect,
   onWrong,
+  onPass,
   disabled = false,
 }: Props) {
   const [modalOpen, setModalOpen] = useState(false);
@@ -82,7 +87,7 @@ export default function PlayerSearch({
       onCorrect(detail);
     } else {
       setSelectedName('');
-      onWrong(item.player.name);
+      onWrong(detail);
     }
   }
 
@@ -91,6 +96,11 @@ export default function PlayerSearch({
     setQuery('');
     setResults([]);
     setModalOpen(true);
+  }
+
+  function handlePass() {
+    setModalOpen(false);
+    onPass?.();
   }
 
   return (
@@ -130,6 +140,7 @@ export default function PlayerSearch({
                 autoCorrect={false}
                 autoCapitalize="words"
                 clearButtonMode="while-editing"
+                inputAccessoryViewID={onPass && Platform.OS === 'ios' ? PASS_ACCESSORY_ID : undefined}
               />
               {loading && (
                 <ActivityIndicator size="small" color={C.green} style={{ marginRight: 14 }} />
@@ -171,9 +182,27 @@ export default function PlayerSearch({
                 </Text>
               </View>
             )}
+
+            {/* Android: klavye üstü GEÇ butonu */}
+            {onPass && Platform.OS === 'android' && (
+              <TouchableOpacity style={s.passBar} onPress={handlePass} activeOpacity={0.8}>
+                <Text style={s.passBarText}>GEÇ</Text>
+              </TouchableOpacity>
+            )}
           </KeyboardAvoidingView>
         </SafeAreaView>
       </Modal>
+
+      {/* iOS: klavyenin hemen üstüne yapışan toolbar */}
+      {onPass && Platform.OS === 'ios' && (
+        <InputAccessoryView nativeID={PASS_ACCESSORY_ID}>
+          <View style={s.passBar}>
+            <TouchableOpacity onPress={handlePass} activeOpacity={0.8} style={s.passBarBtn}>
+              <Text style={s.passBarText}>GEÇ</Text>
+            </TouchableOpacity>
+          </View>
+        </InputAccessoryView>
+      )}
     </>
   );
 }
@@ -243,4 +272,14 @@ const s = StyleSheet.create({
 
   emptyBox: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   emptyText: { color: C.textMuted, fontSize: 13, letterSpacing: 2 },
+
+  passBar: {
+    backgroundColor: C.bgCard,
+    borderTopWidth: 1,
+    borderTopColor: C.greenBorder,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  passBarBtn: { paddingHorizontal: 32, paddingVertical: 4 },
+  passBarText: { color: C.textMuted, fontSize: 14, fontWeight: '700', letterSpacing: 4 },
 });

@@ -30,8 +30,10 @@ export default function Mode1Page() {
   const router = useRouter();
   const store = useGameStore();
   const [showHandoff, setShowHandoff] = useState(false);
+  const [pendingGuesser, setPendingGuesser] = useState<1 | 2 | null>(null);
   const [resultCard, setResultCard] = useState<PlayerCareerDetail | null>(null);
   const [resultOnClose, setResultOnClose] = useState<(() => void) | null>(null);
+  const [wrongCard, setWrongCard] = useState<{ detail: PlayerCareerDetail; next: 1 | 2 | null } | null>(null);
 
   // ─────────────────────────────────────────────
   // TAKIM SEÇİM AŞAMASI
@@ -140,6 +142,26 @@ export default function Mode1Page() {
   if (store.mode1Phase === 'guessing' && store.activeGuesser) {
     const guesser = store.activeGuesser;
 
+    // Telefon teslim ekranı (yanlış tahmin veya GEÇ sonrası)
+    if (pendingGuesser !== null) {
+      const nextName = pendingGuesser === 1 ? store.player1Name : store.player2Name;
+      return (
+        <SafeAreaView style={s.safe}>
+          <View style={s.centerPage}>
+            <Text style={s.bigEmoji}>📱</Text>
+            <Text style={s.handoffTitle}>TELEFONU{'\n'}{nextName.toUpperCase()}'E VER</Text>
+            <Text style={s.handoffSub}>Diğer oyuncu tahminini yapacak</Text>
+            <TouchableOpacity style={s.primaryBtn} onPress={() => {
+              store.setActiveGuesser(pendingGuesser);
+              setPendingGuesser(null);
+            }}>
+              <Text style={s.primaryBtnText}>HAZIR</Text>
+            </TouchableOpacity>
+          </View>
+        </SafeAreaView>
+      );
+    }
+
     function handleCorrect(detail: PlayerCareerDetail) {
       store.addScore(guesser);
       const newScore = guesser === 1 ? store.score1 + 1 : store.score2 + 1;
@@ -153,27 +175,22 @@ export default function Mode1Page() {
       setResultOnClose(() => () => { setResultCard(null); setResultOnClose(null); store.nextMode1Round(); });
     }
 
-    function handleWrong(playerName: string) {
+    function handleWrong(detail: PlayerCareerDetail) {
       const other: 1 | 2 = guesser === 1 ? 2 : 1;
       const otherPassed = other === 1 ? store.p1Passed : store.p2Passed;
-      if (otherPassed) {
-        Alert.alert('❌ YANLIŞ', `${playerName} ortak değil. Tur bitti.`, [
-          { text: 'YENİ TUR', onPress: () => store.nextMode1Round() },
-        ]);
-        return;
-      }
-      const otherName = other === 1 ? store.player1Name : store.player2Name;
-      Alert.alert('❌ YANLIŞ', `${playerName} ortak değil. Hak ${otherName}'e geçti.`, [
-        { text: 'TAMAM', onPress: () => { store.setPass(guesser, true); store.setActiveGuesser(other); } },
-      ]);
+      store.setPass(guesser, true);
+      setWrongCard({ detail, next: otherPassed ? null : other });
     }
 
     function handlePassPress() {
       const other: 1 | 2 = guesser === 1 ? 2 : 1;
       const otherPassed = other === 1 ? store.p1Passed : store.p2Passed;
+      if (otherPassed) {
+        store.nextMode1Round();
+        return;
+      }
       store.setPass(guesser, true);
-      if (otherPassed) { store.nextMode1Round(); }
-      else { store.setActiveGuesser(other); }
+      setPendingGuesser(other);
     }
 
     function handleHomePress() {
@@ -196,8 +213,9 @@ export default function Mode1Page() {
           team1Id={store.team1.apiId}
           team2Id={store.team2.apiId}
           placeholder="Oyuncu ara..."
-          onCorrect={(detail) => handleCorrect(detail)}
+          onCorrect={handleCorrect}
           onWrong={handleWrong}
+          onPass={handlePassPress}
         />
         <TouchableOpacity style={[s.skipBtn, { marginTop: 16 }]} onPress={handlePassPress} activeOpacity={0.8}>
           <Text style={s.skipBtnText}>GEÇ</Text>
@@ -214,6 +232,7 @@ export default function Mode1Page() {
           activeContent={activeContent}
           onHomePress={handleHomePress}
         />
+        {/* Doğru tahmin kartı */}
         <Modal
           visible={!!resultCard}
           transparent
@@ -244,6 +263,49 @@ export default function Mode1Page() {
                 </View>
               </View>
               <TouchableOpacity style={s.resultBtn} onPress={() => resultOnClose?.()} activeOpacity={0.8}>
+                <Text style={s.resultBtnText}>DEVAM →</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+
+        {/* Yanlış tahmin kartı */}
+        <Modal
+          visible={!!wrongCard}
+          transparent
+          animationType="fade"
+          onRequestClose={() => {
+            const next = wrongCard?.next ?? null;
+            setWrongCard(null);
+            if (next) setPendingGuesser(next);
+            else store.nextMode1Round();
+          }}
+        >
+          <View style={s.resultOverlay}>
+            <View style={s.resultCard}>
+              <Text style={s.wrongBadge}>❌ YANLIŞ!</Text>
+              {wrongCard?.detail.playerPhoto ? (
+                <Image
+                  source={{ uri: wrongCard.detail.playerPhoto, headers: { Referer: 'https://www.transfermarkt.com/' } }}
+                  style={s.resultPhoto}
+                />
+              ) : (
+                <View style={s.resultPhotoPlaceholder} />
+              )}
+              <Text style={s.resultName}>{wrongCard?.detail.playerName}</Text>
+              <Text style={s.wrongSub}>
+                {store.team1.name.toUpperCase()} × {store.team2.name.toUpperCase()}{'\n'}arasında ortak değil
+              </Text>
+              <TouchableOpacity
+                style={s.resultBtn}
+                activeOpacity={0.8}
+                onPress={() => {
+                  const next = wrongCard?.next ?? null;
+                  setWrongCard(null);
+                  if (next) setPendingGuesser(next);
+                  else store.nextMode1Round();
+                }}
+              >
                 <Text style={s.resultBtnText}>DEVAM →</Text>
               </TouchableOpacity>
             </View>
@@ -354,4 +416,6 @@ const s = StyleSheet.create({
     alignItems: 'center',
   },
   resultBtnText: { color: C.bg, fontSize: 15, fontWeight: '900', letterSpacing: 4 },
+  wrongBadge: { fontSize: 13, fontWeight: '900', color: '#e74c3c', letterSpacing: 4, marginBottom: 20 },
+  wrongSub: { fontSize: 12, color: C.textMuted, letterSpacing: 1, textAlign: 'center', marginBottom: 28, lineHeight: 20 },
 });

@@ -62,16 +62,11 @@ export function searchPlayers(
   team2Id: string | null,
   searchType: 'club-club' | 'national-club' = 'club-club',
 ): PlayerResult[] {
-  if (query.length < 3 || !team1Id || !team2Id) return [];
+  if (query.length < 3) return [];
   const q = query.toLowerCase();
 
   return players
-    .filter(p => {
-      if (!p.name.toLowerCase().includes(q)) return false;
-      return searchType === 'club-club'
-        ? p.clubs.includes(team1Id) && p.clubs.includes(team2Id)
-        : p.nationalTeams.includes(team1Id) && p.clubs.includes(team2Id);
-    })
+    .filter(p => p.name.toLowerCase().includes(q))
     .slice(0, 10)
     .map(p => ({
       player: { id: p.id, name: p.name, photo: p.photo, nationality: '' },
