@@ -46,7 +46,7 @@ export default function Mode1Page() {
 
     // Telefon geçiş ekranı
     if (showHandoff) {
-      const nextName = activePlayerNum === 1 ? store.player2Name : store.player1Name;
+      const nextName = activePlayerNum === 1 ? store.player1Name : store.player2Name;
       return (
         <SafeAreaView style={s.safe}>
           <View style={s.centerPage}>
@@ -78,13 +78,6 @@ export default function Mode1Page() {
       }
     }
 
-    function handleSkip() {
-      Alert.alert('GEÇ', 'Bu turu geçmek istediğine emin misin?', [
-        { text: 'İptal', style: 'cancel' },
-        { text: 'GEÇ', onPress: () => { store.nextMode1Round(); setShowHandoff(false); } },
-      ]);
-    }
-
     // ScrollView YOK — FlatList (TeamSearch dropdown) iç içe geçmez
     return (
       <SafeAreaView style={s.safe}>
@@ -109,9 +102,6 @@ export default function Mode1Page() {
             >
               <Text style={s.primaryBtnText}>ONAYLA</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={s.skipBtn} onPress={handleSkip}>
-              <Text style={s.skipBtnText}>GEÇ</Text>
-            </TouchableOpacity>
           </View>
         </KeyboardAvoidingView>
       </SafeAreaView>
@@ -125,44 +115,7 @@ export default function Mode1Page() {
     return (
       <SafeAreaView style={s.safe}>
         <ScoreBoard />
-        <Countdown onFinish={() => store.setMode1Phase('reveal')} />
-      </SafeAreaView>
-    );
-  }
-
-  // ─────────────────────────────────────────────
-  // TAKIM AÇIKLAMA
-  // ─────────────────────────────────────────────
-  if (store.mode1Phase === 'reveal') {
-    const sameTeam = store.team1.apiId !== null && store.team1.apiId === store.team2.apiId;
-    return (
-      <SafeAreaView style={s.safe}>
-        <ScoreBoard />
-        <View style={s.revealPage}>
-          <Text style={s.sectionLabel}>TAKIMLAR</Text>
-          <View style={s.teamsRow}>
-            <View style={s.teamCard}>
-              <Text style={s.teamCardPlayer}>{store.player1Name.toUpperCase()}</Text>
-              <Text style={s.teamCardName}>{store.team1.name.toUpperCase()}</Text>
-            </View>
-            <Text style={s.vsText}>VS</Text>
-            <View style={s.teamCard}>
-              <Text style={s.teamCardPlayer}>{store.player2Name.toUpperCase()}</Text>
-              <Text style={s.teamCardName}>{store.team2.name.toUpperCase()}</Text>
-            </View>
-          </View>
-          {sameTeam && (
-            <View style={s.sameTeamBadge}>
-              <Text style={s.sameTeamText}>AYNI TAKIM — O TAKIMDAN BİR OYUNCU</Text>
-            </View>
-          )}
-          <TouchableOpacity
-            style={[s.primaryBtn, { marginTop: 32 }]}
-            onPress={() => store.setMode1Phase('hazir')}
-          >
-            <Text style={s.primaryBtnText}>HAZIR EKRANI →</Text>
-          </TouchableOpacity>
-        </View>
+        <Countdown onFinish={() => store.setMode1Phase('hazir')} />
       </SafeAreaView>
     );
   }
@@ -223,13 +176,22 @@ export default function Mode1Page() {
       else { store.setActiveGuesser(other); }
     }
 
-    // KeyboardAvoidingView SplitScreen içinde — FlatList nested ScrollView içinde değil
+    function handleHomePress() {
+      Alert.alert(
+        'ANA SAYFAYA DÖN',
+        'Oyundan çıkmak istediğinize emin misiniz?',
+        [
+          { text: 'İPTAL', style: 'cancel' },
+          { text: 'ÇIKIŞ', style: 'destructive', onPress: () => { store.resetGame(); router.replace('/'); } },
+        ],
+      );
+    }
+
     const activeContent = (
       <View style={s.flex}>
         <Text style={s.teamHint}>
           {store.team1.name.toUpperCase()} × {store.team2.name.toUpperCase()}
         </Text>
-        {/* Modal tabanlı arama — overflow/kırpma sorunu yok */}
         <PlayerSearch
           team1Id={store.team1.apiId}
           team2Id={store.team2.apiId}
@@ -237,7 +199,7 @@ export default function Mode1Page() {
           onCorrect={(detail) => handleCorrect(detail)}
           onWrong={handleWrong}
         />
-        <TouchableOpacity style={[s.skipBtn, { marginTop: 16 }]} onPress={handlePassPress}>
+        <TouchableOpacity style={[s.skipBtn, { marginTop: 16 }]} onPress={handlePassPress} activeOpacity={0.8}>
           <Text style={s.skipBtnText}>GEÇ</Text>
         </TouchableOpacity>
       </View>
@@ -250,6 +212,7 @@ export default function Mode1Page() {
           player1Name={store.player1Name}
           player2Name={store.player2Name}
           activeContent={activeContent}
+          onHomePress={handleHomePress}
         />
         <Modal
           visible={!!resultCard}
@@ -261,7 +224,10 @@ export default function Mode1Page() {
             <View style={s.resultCard}>
               <Text style={s.resultBadge}>✅ DOĞRU!</Text>
               {resultCard?.playerPhoto ? (
-                <Image source={{ uri: resultCard.playerPhoto }} style={s.resultPhoto} />
+                <Image
+                  source={{ uri: resultCard.playerPhoto, headers: { Referer: 'https://www.transfermarkt.com/' } }}
+                  style={s.resultPhoto}
+                />
               ) : (
                 <View style={s.resultPhotoPlaceholder} />
               )}
@@ -310,17 +276,10 @@ const s = StyleSheet.create({
   primaryBtnText: { color: C.bg, fontSize: 16, fontWeight: '900', letterSpacing: 4 },
   skipBtn: { borderWidth: 1, borderColor: C.greenBorder, borderRadius: 6, paddingVertical: 14, alignItems: 'center', marginTop: 12 },
   skipBtnText: { color: C.textMuted, fontSize: 14, fontWeight: '700', letterSpacing: 3 },
+  homeBtn: { borderWidth: 1, borderColor: C.greenBorder, borderRadius: 6, paddingVertical: 12, alignItems: 'center' },
+  homeBtnText: { color: C.textMuted, fontSize: 12, fontWeight: '700', letterSpacing: 3 },
   handoffTitle: { fontSize: 26, fontWeight: '900', color: C.green, letterSpacing: 3, textAlign: 'center', marginBottom: 12 },
   handoffSub: { fontSize: 13, color: C.textMuted, letterSpacing: 2, marginBottom: 40, textAlign: 'center' },
-  revealPage: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 28 },
-  sectionLabel: { fontSize: 13, fontWeight: '700', color: C.textMuted, letterSpacing: 4, marginBottom: 28 },
-  teamsRow: { flexDirection: 'row', alignItems: 'center', gap: 12, width: '100%' },
-  teamCard: { flex: 1, backgroundColor: C.bgCard, borderWidth: 1, borderColor: C.greenBorder, borderRadius: 8, padding: 16, alignItems: 'center' },
-  teamCardPlayer: { fontSize: 10, fontWeight: '700', color: C.textMuted, letterSpacing: 2, marginBottom: 8 },
-  teamCardName: { fontSize: 14, fontWeight: '900', color: C.green, letterSpacing: 1, textAlign: 'center' },
-  vsText: { fontSize: 16, fontWeight: '900', color: C.textMuted, letterSpacing: 2 },
-  sameTeamBadge: { marginTop: 16, borderWidth: 1, borderColor: C.green, borderRadius: 6, paddingHorizontal: 16, paddingVertical: 10 },
-  sameTeamText: { color: C.green, fontSize: 11, fontWeight: '700', letterSpacing: 2, textAlign: 'center' },
   teamHint: { fontSize: 10, color: C.textMuted, letterSpacing: 2, fontWeight: '700', marginBottom: 12 },
 
   resultOverlay: {

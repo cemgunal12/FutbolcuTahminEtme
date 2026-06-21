@@ -17,8 +17,7 @@ export interface TeamInfo {
 export type Mode1Phase =
   | 'team-select'      // P1 takımını girer, sonra P2
   | 'countdown'        // 3-2-1 geri sayım
-  | 'reveal'           // İki takım açıklanıyor
-  | 'hazir'            // HAZIR butonu bekleniyor (yatay ekran)
+  | 'hazir'            // HAZIR butonu bekleniyor (takımlar burada gösterilir)
   | 'guessing'         // Aktif oyuncu ortak oyuncu tahmin ediyor
   | 'round-end';       // Tur bitti, sıradaki tura geçiş
 
@@ -26,8 +25,7 @@ export type Mode1Phase =
 export type Mode2Phase =
   | 'team-select'      // İlk oyuncu ülke, ikinci oyuncu takım seçer
   | 'countdown'        // 3-2-1 geri sayım
-  | 'reveal'           // Ülke ve takım açıklanıyor
-  | 'hazir'            // HAZIR butonu bekleniyor
+  | 'hazir'            // HAZIR butonu bekleniyor (takımlar burada gösterilir)
   | 'guessing';        // Ortak futbolcu tahmin ediliyor
 
 export interface GameState {

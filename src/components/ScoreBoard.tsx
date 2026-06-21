@@ -2,7 +2,8 @@
 // İki oyuncunun adı ve skoru, ortada hedef skor ile gösterilir.
 
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, Alert, StyleSheet } from 'react-native';
+import { useRouter } from 'expo-router';
 import { useGameStore } from '../store/gameStore';
 import { C } from '../theme';
 
@@ -11,10 +12,25 @@ interface Props {
 }
 
 export default function ScoreBoard({ rotated = false }: Props) {
-  const { player1Name, player2Name, score1, score2, winScore } = useGameStore();
+  const { player1Name, player2Name, score1, score2, winScore, resetGame } = useGameStore();
+  const router = useRouter();
+
+  function handleHomePress() {
+    Alert.alert(
+      'ANA SAYFAYA DÖN',
+      'Oyundan çıkmak istediğinize emin misiniz?',
+      [
+        { text: 'İPTAL', style: 'cancel' },
+        { text: 'ÇIKIŞ', style: 'destructive', onPress: () => { resetGame(); router.replace('/'); } },
+      ],
+    );
+  }
 
   return (
     <View style={[s.bar, rotated && { transform: [{ rotate: '180deg' }] }]}>
+      <TouchableOpacity style={s.homeBtn} onPress={handleHomePress} activeOpacity={0.7}>
+        <Text style={s.homeIcon}>⌂</Text>
+      </TouchableOpacity>
       <View style={s.side}>
         <Text style={s.name} numberOfLines={1}>{player1Name}</Text>
         <Text style={s.score}>{score1}</Text>
@@ -27,6 +43,7 @@ export default function ScoreBoard({ rotated = false }: Props) {
         <Text style={s.name} numberOfLines={1}>{player2Name}</Text>
         <Text style={s.score}>{score2}</Text>
       </View>
+      <View style={s.spacer} />
     </View>
   );
 }
@@ -38,9 +55,12 @@ const s = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: C.greenBorder,
     paddingVertical: 10,
-    paddingHorizontal: 20,
+    paddingHorizontal: 8,
     alignItems: 'center',
   },
+  homeBtn: { width: 40, alignItems: 'center', justifyContent: 'center' },
+  homeIcon: { fontSize: 20, color: C.textMuted },
+  spacer: { width: 40 },
   side: { flex: 1, alignItems: 'center' },
   name: {
     fontSize: 11,

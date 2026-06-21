@@ -37,7 +37,14 @@ export function searchTeams(query: string): TeamResult[] {
   return Object.entries(clubs)
     .filter(([, name]) => name.toLowerCase().includes(q))
     .slice(0, 7)
-    .map(([id, name]) => ({ team: { id, name, logo: '', country: '' } }));
+    .map(([id, name]) => ({
+      team: {
+        id,
+        name,
+        logo: `https://tmssl.akamaized.net/images/wappen/head/${id}.png`,
+        country: '',
+      },
+    }));
 }
 
 export function searchNationalTeams(query: string): TeamResult[] {

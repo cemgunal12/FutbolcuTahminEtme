@@ -149,7 +149,10 @@ export default function PlayerSearch({
                     activeOpacity={0.7}
                   >
                     {item.player.photo ? (
-                      <Image source={{ uri: item.player.photo }} style={s.photo} />
+                      <Image
+                        source={{ uri: item.player.photo, headers: { Referer: 'https://www.transfermarkt.com/' } }}
+                        style={s.photo}
+                      />
                     ) : (
                       <View style={s.photoPlaceholder} />
                     )}

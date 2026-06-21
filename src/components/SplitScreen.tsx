@@ -3,15 +3,15 @@
 // Pasif taraf soluk gösterilir; SplitScreen içeriği dışarıdan prop ile gelir.
 
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { C } from '../theme';
 
 interface Props {
   activePlayer: 1 | 2;
   player1Name: string;
   player2Name: string;
-  // Aktif oyuncunun içeriği (input, butonlar)
   activeContent: React.ReactNode;
+  onHomePress: () => void;
 }
 
 export default function SplitScreen({
@@ -19,20 +19,25 @@ export default function SplitScreen({
   player1Name,
   player2Name,
   activeContent,
+  onHomePress,
 }: Props) {
   const activeName  = activePlayer === 1 ? player1Name  : player2Name;
   const passiveName = activePlayer === 1 ? player2Name  : player1Name;
 
   return (
     <View style={s.container}>
-      {/* Üst yarı — her zaman aktif oyuncuyu gösterir */}
+      {/* Üst yarı — aktif oyuncu */}
       <View style={s.activeHalf}>
         <Text style={s.playerLabel}>{activeName.toUpperCase()}</Text>
         <View style={s.content}>{activeContent}</View>
       </View>
 
-      {/* Bölücü */}
-      <View style={s.divider} />
+      {/* Orta bant — ana sayfa butonu */}
+      <View style={s.centerBand}>
+        <TouchableOpacity style={s.homeBtn} onPress={onHomePress} activeOpacity={0.7}>
+          <Text style={s.homeText}>⌂  ANA SAYFA</Text>
+        </TouchableOpacity>
+      </View>
 
       {/* Alt yarı — pasif oyuncu */}
       <View style={s.passiveHalf}>
@@ -51,9 +56,28 @@ const s = StyleSheet.create({
     paddingHorizontal: 24,
     paddingTop: 20,
     paddingBottom: 12,
-    // Dropdown'ın taşmasına izin ver (iOS), Android'de elevation devreye girer
     overflow: 'visible',
     zIndex: 10,
+  },
+  centerBand: {
+    height: 44,
+    backgroundColor: C.bgCard,
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: C.divider,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 5,
+  },
+  homeBtn: {
+    paddingHorizontal: 24,
+    paddingVertical: 6,
+  },
+  homeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: C.textMuted,
+    letterSpacing: 3,
   },
   passiveHalf: {
     flex: 2,
@@ -62,7 +86,6 @@ const s = StyleSheet.create({
     justifyContent: 'center',
     zIndex: 1,
   },
-  divider: { height: 2, backgroundColor: C.divider, zIndex: 5 },
   playerLabel: {
     fontSize: 12,
     fontWeight: '700',

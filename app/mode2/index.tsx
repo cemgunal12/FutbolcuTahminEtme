@@ -51,7 +51,7 @@ export default function Mode2Page() {
     const searchPlaceholder = isCountryPicker ? 'ÜLKE / MİLLİ TAKIM ARA...' : 'KULÜP TAKIM ARA...';
 
     if (showHandoff) {
-      const nextName = activePlayerNum === 1 ? store.player2Name : store.player1Name;
+      const nextName = activePlayerNum === 1 ? store.player1Name : store.player2Name;
       return (
         <SafeAreaView style={s.safe}>
           <View style={s.centerPage}>
@@ -83,13 +83,6 @@ export default function Mode2Page() {
       }
     }
 
-    function handleSkip() {
-      Alert.alert('GEÇ', 'Bu turu geçmek istediğine emin misin?', [
-        { text: 'İptal', style: 'cancel' },
-        { text: 'GEÇ', onPress: () => { store.nextMode2Round(); setShowHandoff(false); } },
-      ]);
-    }
-
     return (
       <SafeAreaView style={s.safe}>
         <ScoreBoard />
@@ -115,9 +108,6 @@ export default function Mode2Page() {
             >
               <Text style={s.primaryBtnText}>ONAYLA</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={s.skipBtn} onPress={handleSkip}>
-              <Text style={s.skipBtnText}>GEÇ</Text>
-            </TouchableOpacity>
           </View>
         </KeyboardAvoidingView>
       </SafeAreaView>
@@ -131,48 +121,7 @@ export default function Mode2Page() {
     return (
       <SafeAreaView style={s.safe}>
         <ScoreBoard />
-        <Countdown onFinish={() => store.setMode2Phase('reveal')} />
-      </SafeAreaView>
-    );
-  }
-
-  // ─────────────────────────────────────────────
-  // AÇIKLAMA
-  // ─────────────────────────────────────────────
-  if (store.mode2Phase === 'reveal') {
-    // İlk seçen (currentTurn) ülkeyi seçti, ikinci seçen kulübü seçti
-    const ulkePlayerNum = store.currentTurn;
-    const takimPlayerNum: 1 | 2 = store.currentTurn === 1 ? 2 : 1;
-    const ulkeTeam = ulkePlayerNum === 1 ? store.team1 : store.team2;
-    const takimTeam = takimPlayerNum === 1 ? store.team1 : store.team2;
-    const ulkePlayerName = ulkePlayerNum === 1 ? store.player1Name : store.player2Name;
-    const takimPlayerName = takimPlayerNum === 1 ? store.player1Name : store.player2Name;
-
-    return (
-      <SafeAreaView style={s.safe}>
-        <ScoreBoard />
-        <View style={s.revealPage}>
-          <Text style={s.sectionLabel}>ÜLKE & TAKIM</Text>
-          <View style={s.teamsRow}>
-            <View style={s.teamCard}>
-              <Text style={s.teamCardType}>🌍 ÜLKE</Text>
-              <Text style={s.teamCardPlayer}>{ulkePlayerName.toUpperCase()}</Text>
-              <Text style={s.teamCardName}>{ulkeTeam.name.toUpperCase()}</Text>
-            </View>
-            <Text style={s.vsText}>VS</Text>
-            <View style={s.teamCard}>
-              <Text style={s.teamCardType}>⚽ TAKIM</Text>
-              <Text style={s.teamCardPlayer}>{takimPlayerName.toUpperCase()}</Text>
-              <Text style={s.teamCardName}>{takimTeam.name.toUpperCase()}</Text>
-            </View>
-          </View>
-          <TouchableOpacity
-            style={[s.primaryBtn, { marginTop: 32 }]}
-            onPress={() => store.setMode2Phase('hazir')}
-          >
-            <Text style={s.primaryBtnText}>HAZIR EKRANI →</Text>
-          </TouchableOpacity>
-        </View>
+        <Countdown onFinish={() => store.setMode2Phase('hazir')} />
       </SafeAreaView>
     );
   }
@@ -236,6 +185,17 @@ export default function Mode2Page() {
       else { store.setActiveGuesser(other); }
     }
 
+    function handleHomePress() {
+      Alert.alert(
+        'ANA SAYFAYA DÖN',
+        'Oyundan çıkmak istediğinize emin misiniz?',
+        [
+          { text: 'İPTAL', style: 'cancel' },
+          { text: 'ÇIKIŞ', style: 'destructive', onPress: () => { store.resetGame(); router.replace('/'); } },
+        ],
+      );
+    }
+
     const activeContent = (
       <View style={s.flex}>
         <Text style={s.teamHint}>
@@ -249,7 +209,7 @@ export default function Mode2Page() {
           onCorrect={(detail) => handleCorrect(detail)}
           onWrong={handleWrong}
         />
-        <TouchableOpacity style={[s.skipBtn, { marginTop: 16 }]} onPress={handlePassPress}>
+        <TouchableOpacity style={[s.skipBtn, { marginTop: 16 }]} onPress={handlePassPress} activeOpacity={0.8}>
           <Text style={s.skipBtnText}>GEÇ</Text>
         </TouchableOpacity>
       </View>
@@ -262,6 +222,7 @@ export default function Mode2Page() {
           player1Name={store.player1Name}
           player2Name={store.player2Name}
           activeContent={activeContent}
+          onHomePress={handleHomePress}
         />
         <Modal
           visible={!!resultCard}
@@ -273,7 +234,10 @@ export default function Mode2Page() {
             <View style={s.resultCard}>
               <Text style={s.resultBadge}>✅ DOĞRU!</Text>
               {resultCard?.playerPhoto ? (
-                <Image source={{ uri: resultCard.playerPhoto }} style={s.resultPhoto} />
+                <Image
+                  source={{ uri: resultCard.playerPhoto, headers: { Referer: 'https://www.transfermarkt.com/' } }}
+                  style={s.resultPhoto}
+                />
               ) : (
                 <View style={s.resultPhotoPlaceholder} />
               )}
@@ -322,17 +286,11 @@ const s = StyleSheet.create({
   primaryBtnText: { color: C.bg, fontSize: 16, fontWeight: '900', letterSpacing: 4 },
   skipBtn: { borderWidth: 1, borderColor: C.greenBorder, borderRadius: 6, paddingVertical: 14, alignItems: 'center', marginTop: 12 },
   skipBtnText: { color: C.textMuted, fontSize: 14, fontWeight: '700', letterSpacing: 3 },
+  homeBtn: { borderWidth: 1, borderColor: C.greenBorder, borderRadius: 6, paddingVertical: 12, alignItems: 'center' },
+  homeBtnText: { color: C.textMuted, fontSize: 12, fontWeight: '700', letterSpacing: 3 },
   handoffTitle: { fontSize: 26, fontWeight: '900', color: C.green, letterSpacing: 3, textAlign: 'center', marginBottom: 12 },
   handoffSub: { fontSize: 13, color: C.textMuted, letterSpacing: 2, marginBottom: 40, textAlign: 'center' },
 
-  revealPage: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 28 },
-  sectionLabel: { fontSize: 13, fontWeight: '700', color: C.textMuted, letterSpacing: 4, marginBottom: 28 },
-  teamsRow: { flexDirection: 'row', alignItems: 'center', gap: 12, width: '100%' },
-  teamCard: { flex: 1, backgroundColor: C.bgCard, borderWidth: 1, borderColor: C.greenBorder, borderRadius: 8, padding: 16, alignItems: 'center' },
-  teamCardType: { fontSize: 10, fontWeight: '700', color: C.green, letterSpacing: 2, marginBottom: 6 },
-  teamCardPlayer: { fontSize: 10, fontWeight: '700', color: C.textMuted, letterSpacing: 2, marginBottom: 8 },
-  teamCardName: { fontSize: 14, fontWeight: '900', color: C.green, letterSpacing: 1, textAlign: 'center' },
-  vsText: { fontSize: 16, fontWeight: '900', color: C.textMuted, letterSpacing: 2 },
   teamHint: { fontSize: 10, color: C.textMuted, letterSpacing: 2, fontWeight: '700', marginBottom: 12 },
 
   resultOverlay: {

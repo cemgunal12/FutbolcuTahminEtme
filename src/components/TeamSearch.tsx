@@ -92,7 +92,7 @@ export default function TeamSearch({
               >
                 {item.team.logo ? (
                   <Image
-                    source={{ uri: item.team.logo }}
+                    source={{ uri: item.team.logo, headers: { Referer: 'https://www.transfermarkt.com/' } }}
                     style={s.logo}
                     resizeMode="contain"
                   />
